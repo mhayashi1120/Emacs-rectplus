@@ -137,6 +137,8 @@ NUMBER-STRING indicate start number and inserted format.
   \" 1\"  => [\" 1\" \" 2\" \" 3\" ...]
 
 STEP is incremental count. Default is 1.
+
+`rectangle-number-lines' is new feature on Emacs 24 or later.
 "
   (interactive 
    (progn
@@ -145,7 +147,7 @@ STEP is incremental count. Default is 1.
      (let ((beg (region-beginning))
 	   (fin (region-end))
 	   number step)
-       (setq number (rectplus-read-from-minibuffer "Number: " "^[ ]*[0-9]*$"))
+       (setq number (rectplus-read-from-minibuffer "Start number and format: " "^[ ]*[0-9]*$"))
        (when current-prefix-arg
 	 (setq step (rectplus-read-number "Step: " 1)))
        (deactivate-mark)
