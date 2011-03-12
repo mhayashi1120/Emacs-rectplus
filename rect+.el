@@ -42,7 +42,7 @@
 ;;     (define-key ctl-x-r-map "\M-u" 'rectplus-upcase-rectangle)
 
 ;; ********** Emacs 22 or earlier **********
-;;     (require 'gather)
+;;     (require 'rect+)
 ;;     (global-set-key "\C-xrC" 'rectplus-copy-rectangle)
 ;;     (global-set-key "\C-xrN" 'rectplus-insert-number-rectangle)
 ;;     (global-set-key "\C-xr\M-c" 'rectplus-create-rectangle-by-regexp)
