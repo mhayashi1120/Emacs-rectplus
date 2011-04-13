@@ -1,6 +1,6 @@
 ;;; rect+.el --- Extensions to rect.el
 
-;; Author: Hayashi Masahiro <mhayashi1120@gmail.com>
+;; Author: Masahiro Hayashi <mhayashi1120@gmail.com>
 ;; Keywords: rectangle edit
 ;; URL: http://github.com/mhayashi1120/Emacs-rectplus/raw/master/rect+.el
 ;; URL: http://www.emacswiki.org/emacs/download/rect+.el
