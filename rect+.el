@@ -3,7 +3,6 @@
 ;; Author: Masahiro Hayashi <mhayashi1120@gmail.com>
 ;; Keywords: rectangle edit
 ;; URL: http://github.com/mhayashi1120/Emacs-rectplus/raw/master/rect+.el
-;; URL: http://www.emacswiki.org/emacs/download/rect+.el
 ;; Emacs: GNU Emacs 21 or later
 ;; Version 1.0.0
 
