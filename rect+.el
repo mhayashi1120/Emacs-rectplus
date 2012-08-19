@@ -4,7 +4,7 @@
 ;; Keywords: rectangle edit
 ;; URL: http://github.com/mhayashi1120/Emacs-rectplus/raw/master/rect+.el
 ;; Emacs: GNU Emacs 21 or later
-;; Version 1.0.0
+;; Version 1.0.1
 
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License as
@@ -57,6 +57,7 @@
 
 (defvar current-prefix-arg)
 
+;;;###autoload
 (defun rectplus-rectangle-to-kill-ring ()
   "Killed rectangle to normal `kill-ring'.
 After executing this command, you can type \\[yank]."
@@ -71,6 +72,7 @@ After executing this command, you can type \\[yank]."
 	    (concat "Killed rectangle converted to normal text. "
 		    "You can type \\[yank] now."))))
 
+;;;###autoload
 (defun rectplus-kill-ring-to-rectangle (&optional succeeding)
   "Make rectangle from clipboard or `kill-ring'. 
 After executing this command, you can type \\[yank-rectangle]."
@@ -102,6 +104,7 @@ After executing this command, you can type \\[yank-rectangle]."
 	    (concat "Killed text converted to rectangle. "
 		    "You can type \\[yank-rectangle] now."))))
 
+;;;###autoload
 (defun rectplus-append-rectangle-to-eol (&optional preceeding)
   "Append killed rectangle to end-of-line sequentially."
   (interactive
@@ -120,12 +123,14 @@ After executing this command, you can type \\[yank-rectangle]."
        (forward-line 1))
      killed-rectangle)))
 
+;;;###autoload
 (defun rectplus-copy-rectangle (start end)
   "Copy rectangle area."
   (interactive "r")
   (deactivate-mark)
   (setq killed-rectangle (extract-rectangle start end)))
 
+;;;###autoload
 (defun rectplus-insert-number-rectangle (start end number-string &optional step)
   "Insert incremental number into each left edges of rectangle's line
 
@@ -176,6 +181,7 @@ STEP is incremental count. Default is 1.
       (goto-char start)
       (insert-rectangle (nreverse rect-lst)))))
 
+;;;###autoload
 (defun rectplus-create-rectangle-by-regexp (start end regexp)
   "Capture string matching to REGEXP.
 Only effect to region if region is activated.
@@ -201,10 +207,12 @@ Only effect to region if region is activated.
     (setq killed-rectangle 
 	  (rectplus-non-rectangle-to-rectangle (nreverse list) max))))
 
+;;;###autoload
 (defun rectplus-upcase-rectangle (start end)
   (interactive "*r")
   (rectplus-do-translate start end 'upcase))
 
+;;;###autoload
 (defun rectplus-downcase-rectangle (start end)
   (interactive "*r")
   (rectplus-do-translate start end 'downcase))
