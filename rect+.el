@@ -4,7 +4,7 @@
 ;; Keywords: rectangle edit
 ;; URL: http://github.com/mhayashi1120/Emacs-rectplus/raw/master/rect+.el
 ;; Emacs: GNU Emacs 21 or later
-;; Version 1.0.1
+;; Version 1.0.2
 
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License as
@@ -244,7 +244,7 @@ See `read-from-minibuffer'."
 
 (defun rectplus-read-number (prompt default)
   (string-to-number (rectplus-read-from-minibuffer 
-		     prompt "^[0-9]+$" 
+		     prompt "^[-+]?[0-9]+$" 
 		     (number-to-string default))))
 
 (defun rectplus-non-rectangle-to-rectangle (strings &optional max)
