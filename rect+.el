@@ -4,7 +4,7 @@
 ;; Keywords: rectangle edit
 ;; URL: http://github.com/mhayashi1120/Emacs-rectplus/raw/master/rect+.el
 ;; Emacs: GNU Emacs 21 or later
-;; Version 1.0.2
+;; Version 1.0.3
 
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License as
@@ -65,7 +65,7 @@ After executing this command, you can type \\[yank]."
   (with-temp-buffer
     (yank-rectangle)
     ;;avoid message
-    (let (message-log-max)      
+    (let (message-log-max)
       (message ""))
     (kill-new (buffer-string)))
   (message (substitute-command-keys
@@ -74,11 +74,11 @@ After executing this command, you can type \\[yank]."
 
 ;;;###autoload
 (defun rectplus-kill-ring-to-rectangle (&optional succeeding)
-  "Make rectangle from clipboard or `kill-ring'. 
+  "Make rectangle from clipboard or `kill-ring'.
 After executing this command, you can type \\[yank-rectangle]."
-  (interactive 
+  (interactive
    (let (str)
-     (when current-prefix-arg 
+     (when current-prefix-arg
        (setq str (read-from-minibuffer "Succeeding string to killed: ")))
      (list str)))
   (let ((tab tab-width))
@@ -98,9 +98,9 @@ After executing this command, you can type \\[yank-rectangle]."
 	    (setq max len))
 	  (setq list (cons str list))
 	  (forward-line 1))
-	(setq killed-rectangle 
+	(setq killed-rectangle
 	      (rectplus-non-rectangle-to-rectangle (nreverse list) max)))))
-  (message (substitute-command-keys 
+  (message (substitute-command-keys
 	    (concat "Killed text converted to rectangle. "
 		    "You can type \\[yank-rectangle] now."))))
 
@@ -109,7 +109,7 @@ After executing this command, you can type \\[yank-rectangle]."
   "Append killed rectangle to end-of-line sequentially."
   (interactive
    (let (str)
-     (when current-prefix-arg 
+     (when current-prefix-arg
        (setq str (read-from-minibuffer "Preceeding string to append: ")))
      (list str)))
   (unless preceeding
@@ -145,7 +145,7 @@ STEP is incremental count. Default is 1.
 
 `rectangle-number-lines' is new feature on Emacs 24 or later.
 "
-  (interactive 
+  (interactive
    (progn
      (unless mark-active
        (signal 'mark-inactive nil))
@@ -158,7 +158,7 @@ STEP is incremental count. Default is 1.
        (deactivate-mark)
        (list beg fin number step))))
   (setq step (or step 1))
-  (save-excursion 
+  (save-excursion
     (let ((fmtlen (number-to-string (length number-string)))
 	  (end-marker (set-mark end))
 	  (l 0)
@@ -186,7 +186,7 @@ STEP is incremental count. Default is 1.
   "Capture string matching to REGEXP.
 Only effect to region if region is activated.
 "
-  (interactive 
+  (interactive
    (let* ((beg (if mark-active (region-beginning) (point-min)))
 	  (end (if mark-active (region-end) (point-max)))
 	  (regexp (rectplus-read-regexp "Regexp")))
@@ -194,7 +194,7 @@ Only effect to region if region is activated.
   (let ((max 0)
 	str len list)
     (save-excursion
-      (save-restriction 
+      (save-restriction
 	(narrow-to-region start end)
 	(goto-char (point-min))
 	(while (re-search-forward regexp nil t)
@@ -204,7 +204,7 @@ Only effect to region if region is activated.
 	  (when (> len max)
 	    (setq max len)))))
     ;; fill by space
-    (setq killed-rectangle 
+    (setq killed-rectangle
 	  (rectplus-non-rectangle-to-rectangle (nreverse list) max))))
 
 ;;;###autoload
@@ -219,7 +219,7 @@ Only effect to region if region is activated.
 
 (defun rectplus-do-translate (start end translator)
   "TRANSLATOR is function accept one string argument and return string."
-  (apply-on-rectangle 
+  (apply-on-rectangle
    (lambda (s e)
      (let* ((start (progn (move-to-column s) (point)))
 	    (end (progn (move-to-column e) (point)))
@@ -243,8 +243,8 @@ See `read-from-minibuffer'."
     str))
 
 (defun rectplus-read-number (prompt default)
-  (string-to-number (rectplus-read-from-minibuffer 
-		     prompt "^[-+]?[0-9]+$" 
+  (string-to-number (rectplus-read-from-minibuffer
+		     prompt "^[-+]?[0-9]+$"
 		     (number-to-string default))))
 
 (defun rectplus-non-rectangle-to-rectangle (strings &optional max)
