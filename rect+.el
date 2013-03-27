@@ -1,10 +1,10 @@
 ;;; rect+.el --- Extensions to rect.el
 
 ;; Author: Masahiro Hayashi <mhayashi1120@gmail.com>
-;; Keywords: rectangle edit
+;; Keywords: extensions, data, tools
 ;; URL: http://github.com/mhayashi1120/Emacs-rectplus/raw/master/rect+.el
 ;; Emacs: GNU Emacs 21 or later
-;; Version 1.0.3
+;; Version: 1.0.4
 
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License as
@@ -131,19 +131,34 @@ After executing this command, you can type \\[yank-rectangle]."
   (setq killed-rectangle (extract-rectangle start end)))
 
 ;;;###autoload
-(defun rectplus-insert-number-rectangle (start end number-string &optional step)
-  "Insert incremental number into each left edges of rectangle's line
+(defun rectplus-insert-number-rectangle (start end number-fmt &optional step start-from)
+  "Insert incremental number into each left edges of rectangle's line.
 
-Only effect to region if region is activated.
+START END is rectangle region to insert numbers. 
+ Which is allowed START over END. In this case, inserted descendant numbers.
+ e.g
+   1. In dired buffer type `\\<dired-mode-map>\\[dired-sort-toggle-or-edit]' \
+to sort by modified date descendantly.
+   2. Activate region from old file to new file.
+   3. Do this command to make sequential file name ordered by modified date.
 
-NUMBER-STRING indicate start number and inserted format.
+NUMBER-FMT may indicate start number and inserted format.
   \"1\"   => [\"1\" \"2\" \"3\" ...]
   \"001\" => [\"001\" \"002\" \"003\" ...]
   \" 1\"  => [\" 1\" \" 2\" \" 3\" ...]
+  \" 5\"  => [\" 5\" \" 6\" \" 7\" ...]
 
+This format indication more familiar than `rectangle-number-lines' 
+implementation, I think :-)
+
+On the other hand NUMBER-FMT accept \"%d\" like format too.
+
+  \"%03d\" => [\"001\" \"002\" \"003\" ...]
+  \"%3d\" => [\"  1\" \"  2\" \"  3\" ...]
+  \"file-%03d\" => [\"file-001\" \"file-002\" \"file-003\" ...]
+
+START-FROM indicate number to start, more prior than NUMBER-FMT.
 STEP is incremental count. Default is 1.
-
-`rectangle-number-lines' is new feature on Emacs 24 or later.
 "
   (interactive
    (progn
@@ -151,35 +166,53 @@ STEP is incremental count. Default is 1.
        (signal 'mark-inactive nil))
      (let ((beg (region-beginning))
 	   (fin (region-end))
-	   number step)
-       (setq number (rectplus-read-from-minibuffer "Start number and format: " "^[ ]*[0-9]*$"))
+	   fmt step start-num)
+       (when (eq beg (point))
+         (let ((tmp beg))
+           (setq beg fin
+                 fin tmp)))
+       (setq fmt (rectplus-read-from-minibuffer
+                     "Start number or format: "
+                     ;; padding-char (space or zero) + number
+                     ;; % style format string.
+                     "\\(^[ ]*[0-9]*$\\|%\\)"))
        (when current-prefix-arg
-	 (setq step (rectplus-read-number "Step: " 1)))
+	 (setq step (rectplus-read-number "Step: " 1))
+         (unless (string-match "^[ 0-9]+$" fmt)
+           (setq start-num (rectplus-read-number "Start from: " 1))))
        (deactivate-mark)
-       (list beg fin number step))))
-  (setq step (or step 1))
-  (save-excursion
-    (let ((fmtlen (number-to-string (length number-string)))
-	  (end-marker (set-mark end))
-	  (l 0)
-	  (lines 0)
-	  rect-lst padchar num)
-      (save-excursion
-	(goto-char start)
-	(while (and (<= (point) end)
-		    (not (eobp)))
-	  (forward-line 1)
-	  (setq lines (1+ lines))))
-      (when (string-match "^\\([0 ]\\)" number-string)
-	(setq padchar (match-string 1 number-string)))
-      (setq num (string-to-number number-string))
-      (delete-rectangle start end)
+       (list beg fin fmt step start-num))))
+  (let* ((min (min start end))
+         (max (max start end))
+         (lines (rectplus--count-lines min max))
+         (fmt
+          (cond
+           ((string-match "^\\([0 ]\\)*[0-9]*$" number-fmt)
+            (let* ((padchar (match-string 1 number-fmt))
+                   (fmtlen (number-to-string (length number-fmt))))
+              (concat "%" padchar fmtlen "d")))
+           (t number-fmt)))
+         (num (cond
+               (start-from start-from)
+               ((string-match "^[ 0-9]+$" number-fmt)
+                (string-to-number number-fmt))
+               (t 1)))
+         (l 0)
+         rect-lst)
+    (unless (ignore-errors (format fmt 1))
+      (error "Invalid number format %s" fmt))
+    (setq step (or step 1))
+    (save-excursion
+      (delete-rectangle min max)
+      ;; computing list of insertings
       (while (< l lines)
-	(setq rect-lst (cons (format (concat "%" padchar fmtlen "d") num) rect-lst))
-	(setq num (+ step num)
-	      l (1+ l)))
-      (goto-char start)
-      (insert-rectangle (nreverse rect-lst)))))
+        (setq rect-lst (cons (format fmt num) rect-lst))
+        (setq num (+ step num)
+              l (1+ l)))
+      (when (>= end start)
+        (setq rect-lst (nreverse rect-lst)))
+      (goto-char min)
+      (insert-rectangle rect-lst))))
 
 ;;;###autoload
 (defun rectplus-create-rectangle-by-regexp (start end regexp)
@@ -216,6 +249,16 @@ Only effect to region if region is activated.
 (defun rectplus-downcase-rectangle (start end)
   (interactive "*r")
   (rectplus-do-translate start end 'downcase))
+
+(defun rectplus--count-lines (start end)
+  (let ((lines 0))
+    (save-excursion
+      (goto-char start)
+      (while (and (<= (point) end)
+                  (not (eobp)))
+        (forward-line 1)
+        (setq lines (1+ lines))))
+    lines))
 
 (defun rectplus-do-translate (start end translator)
   "TRANSLATOR is function accept one string argument and return string."
