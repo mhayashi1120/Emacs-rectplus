@@ -3,8 +3,8 @@
 ;; Author: Masahiro Hayashi <mhayashi1120@gmail.com>
 ;; Keywords: extensions, data, tools
 ;; URL: http://github.com/mhayashi1120/Emacs-rectplus/raw/master/rect+.el
-;; Emacs: GNU Emacs 21 or later
-;; Version: 1.0.4
+;; Emacs: GNU Emacs 22 or later
+;; Version: 1.0.5
 
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License as
@@ -93,7 +93,7 @@ After executing this command, you can type \\[yank-rectangle]."
 	  (setq str (buffer-substring (line-beginning-position) (line-end-position)))
 	  (when succeeding
 	    (setq str (concat str succeeding)))
-	  (setq len (length str))
+	  (setq len (string-width str))
 	  (when (> len max)
 	    (setq max len))
 	  (setq list (cons str list))
@@ -134,7 +134,7 @@ After executing this command, you can type \\[yank-rectangle]."
 (defun rectplus-insert-number-rectangle (start end number-fmt &optional step start-from)
   "Insert incremental number into each left edges of rectangle's line.
 
-START END is rectangle region to insert numbers. 
+START END is rectangle region to insert numbers.
  Which is allowed START over END. In this case, inserted descendant numbers.
  e.g
    1. In dired buffer type `\\<dired-mode-map>\\[dired-sort-toggle-or-edit]' \
@@ -148,7 +148,7 @@ NUMBER-FMT may indicate start number and inserted format.
   \" 1\"  => [\" 1\" \" 2\" \" 3\" ...]
   \" 5\"  => [\" 5\" \" 6\" \" 7\" ...]
 
-This format indication more familiar than `rectangle-number-lines' 
+This format indication more familiar than `rectangle-number-lines'
 implementation, I think :-)
 
 On the other hand NUMBER-FMT accept \"%d\" like format too.
@@ -167,6 +167,7 @@ STEP is incremental count. Default is 1.
      (let ((beg (region-beginning))
 	   (fin (region-end))
 	   fmt step start-num)
+       ;; swap start end if mark move backward to beginning-of-buffer
        (when (eq beg (point))
          (let ((tmp beg))
            (setq beg fin
@@ -199,7 +200,7 @@ STEP is incremental count. Default is 1.
                (t 1)))
          (l 0)
          rect-lst)
-    (unless (ignore-errors (format fmt 1))
+    (unless (condition-case nil (format fmt 1) (error nil))
       (error "Invalid number format %s" fmt))
     (setq step (or step 1))
     (save-excursion
@@ -242,11 +243,13 @@ Only effect to region if region is activated.
 
 ;;;###autoload
 (defun rectplus-upcase-rectangle (start end)
+  "Upcase rectangle"
   (interactive "*r")
   (rectplus-do-translate start end 'upcase))
 
 ;;;###autoload
 (defun rectplus-downcase-rectangle (start end)
+  "Downcase rectangle"
   (interactive "*r")
   (rectplus-do-translate start end 'downcase))
 
