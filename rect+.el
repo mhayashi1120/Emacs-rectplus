@@ -2,9 +2,9 @@
 
 ;; Author: Masahiro Hayashi <mhayashi1120@gmail.com>
 ;; Keywords: extensions, data, tools
-;; URL: http://github.com/mhayashi1120/Emacs-rectplus/raw/master/rect+.el
+;; URL: https://github.com/mhayashi1120/Emacs-rectplus/raw/master/rect+.el
 ;; Emacs: GNU Emacs 22 or later
-;; Version: 1.0.5
+;; Version: 1.0.6
 
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License as
@@ -176,10 +176,10 @@ STEP is incremental count. Default is 1.
                      "Start number or format: "
                      ;; padding-char (space or zero) + number
                      ;; % style format string.
-                     "\\(^[ ]*[0-9]*$\\|%\\)"))
+                     "\\(\\`[ ]*[0-9]*\\'\\|%\\)"))
        (when current-prefix-arg
 	 (setq step (rectplus-read-number "Step: " 1))
-         (unless (string-match "^[ 0-9]+$" fmt)
+         (unless (string-match "\\`[ 0-9]+\\'" fmt)
            (setq start-num (rectplus-read-number "Start from: " 1))))
        (deactivate-mark)
        (list beg fin fmt step start-num))))
@@ -188,14 +188,14 @@ STEP is incremental count. Default is 1.
          (lines (rectplus--count-lines min max))
          (fmt
           (cond
-           ((string-match "^\\([0 ]\\)*[0-9]*$" number-fmt)
+           ((string-match "\\`\\([0 ]\\)*[0-9]*\\'" number-fmt)
             (let* ((padchar (match-string 1 number-fmt))
                    (fmtlen (number-to-string (length number-fmt))))
               (concat "%" padchar fmtlen "d")))
            (t number-fmt)))
          (num (cond
                (start-from start-from)
-               ((string-match "^[ 0-9]+$" number-fmt)
+               ((string-match "\\`[ 0-9]+\\'" number-fmt)
                 (string-to-number number-fmt))
                (t 1)))
          (l 0)
@@ -290,7 +290,7 @@ See `read-from-minibuffer'."
 
 (defun rectplus-read-number (prompt default)
   (string-to-number (rectplus-read-from-minibuffer
-		     prompt "^[-+]?[0-9]+$"
+		     prompt "\\`[-+]?[0-9]+\\'"
 		     (number-to-string default))))
 
 (defun rectplus-non-rectangle-to-rectangle (strings &optional max)
@@ -304,6 +304,16 @@ See `read-from-minibuffer'."
   (if (fboundp 'read-regexp)
       (read-regexp prompt)
     (read-from-minibuffer (concat prompt ": "))))
+
+;; for ELPA
+;;;###autoload(define-key ctl-x-r-map "C" 'rectplus-copy-rectangle)
+;;;###autoload(define-key ctl-x-r-map "N" 'rectplus-insert-number-rectangle)
+;;;###autoload(define-key ctl-x-r-map "\M-c" 'rectplus-create-rectangle-by-regexp)
+;;;###autoload(define-key ctl-x-r-map "A" 'rectplus-append-rectangle-to-eol)
+;;;###autoload(define-key ctl-x-r-map "R" 'rectplus-kill-ring-to-rectangle)
+;;;###autoload(define-key ctl-x-r-map "K" 'rectplus-rectangle-to-kill-ring)
+;;;###autoload(define-key ctl-x-r-map "\M-l" 'rectplus-downcase-rectangle)
+;;;###autoload(define-key ctl-x-r-map "\M-u" 'rectplus-upcase-rectangle)
 
 (provide 'rect+)
 
