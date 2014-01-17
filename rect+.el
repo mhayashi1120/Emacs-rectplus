@@ -4,7 +4,7 @@
 ;; Keywords: extensions, data, tools
 ;; URL: https://github.com/mhayashi1120/Emacs-rectplus/raw/master/rect+.el
 ;; Emacs: GNU Emacs 22 or later
-;; Version: 1.0.6
+;; Version: 1.0.7
 
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License as
@@ -131,16 +131,17 @@ After executing this command, you can type \\[yank-rectangle]."
   (setq killed-rectangle (extract-rectangle start end)))
 
 ;;;###autoload
-(defun rectplus-insert-number-rectangle (start end number-fmt &optional step start-from)
+(defun rectplus-insert-number-rectangle (begin end number-fmt &optional step start-from)
   "Insert incremental number into each left edges of rectangle's line.
 
-START END is rectangle region to insert numbers.
- Which is allowed START over END. In this case, inserted descendant numbers.
+BEGIN END is rectangle region to insert numbers.
+ Which is allowed BEGIN over END. In this case, inserted descendant numbers.
  e.g
    1. In dired buffer type `\\<dired-mode-map>\\[dired-sort-toggle-or-edit]' \
 to sort by modified date descendantly.
-   2. Activate region from old file to new file.
-   3. Do this command to make sequential file name ordered by modified date.
+   2. Type \\<dired-mode-map>\\[wdired-change-to-wdired-mode] to use `wdired'.
+   3. Activate region from old file to new file.
+   4. Do this command to make sequential file name ordered by modified date.
 
 NUMBER-FMT may indicate start number and inserted format.
   \"1\"   => [\"1\" \"2\" \"3\" ...]
@@ -151,11 +152,12 @@ NUMBER-FMT may indicate start number and inserted format.
 This format indication more familiar than `rectangle-number-lines'
 implementation, I think :-)
 
-On the other hand NUMBER-FMT accept \"%d\" like format too.
+On the other hand NUMBER-FMT accept \"%d\", \"%o\", \"%x\" like format too.
 
   \"%03d\" => [\"001\" \"002\" \"003\" ...]
   \"%3d\" => [\"  1\" \"  2\" \"  3\" ...]
   \"file-%03d\" => [\"file-001\" \"file-002\" \"file-003\" ...]
+  \"%03x\" => [\"001\" ... \"00a\" \"00b\" ...]
 
 START-FROM indicate number to start, more prior than NUMBER-FMT.
 STEP is incremental count. Default is 1.
@@ -173,44 +175,44 @@ STEP is incremental count. Default is 1.
            (setq beg fin
                  fin tmp)))
        (setq fmt (rectplus-read-from-minibuffer
-                     "Start number or format: "
-                     ;; padding-char (space or zero) + number
-                     ;; % style format string.
-                     "\\(\\`[ ]*[0-9]*\\'\\|%\\)"))
+                  "Start number or format: "
+                  ;; allow all
+                  ".+"))
        (when current-prefix-arg
 	 (setq step (rectplus-read-number "Step: " 1))
-         (unless (string-match "\\`[ 0-9]+\\'" fmt)
+         (when (rectplus--just-a-format-p fmt)
            (setq start-num (rectplus-read-number "Start from: " 1))))
        (deactivate-mark)
        (list beg fin fmt step start-num))))
-  (let* ((min (min start end))
-         (max (max start end))
+  (let* ((min (min begin end))
+         (max (max begin end))
          (lines (rectplus--count-lines min max))
-         (fmt
-          (cond
-           ((string-match "\\`\\([0 ]\\)*[0-9]*\\'" number-fmt)
-            (let* ((padchar (match-string 1 number-fmt))
-                   (fmtlen (number-to-string (length number-fmt))))
-              (concat "%" padchar fmtlen "d")))
-           (t number-fmt)))
-         (num (cond
-               (start-from start-from)
-               ((string-match "\\`[ 0-9]+\\'" number-fmt)
-                (string-to-number number-fmt))
-               (t 1)))
          (l 0)
-         rect-lst)
-    (unless (condition-case nil (format fmt 1) (error nil))
-      (error "Invalid number format %s" fmt))
+         fmt start rect-lst)
+    (cond
+     ((rectplus--just-a-format-p number-fmt)
+      (setq fmt number-fmt)
+      ;; default is start from 1
+      (setq start (or start-from 1)))
+     ((string-match "\\([0 ]\\)*\\([1-9][0-9]*\\)" number-fmt)
+      (let* ((before (substring number-fmt 0 (match-beginning 0)))
+             (after (substring number-fmt (match-end 0)))
+             (start-text (match-string 2 number-fmt))
+             (padchar (match-string 1 number-fmt))
+             (fmt-body (match-string 0 number-fmt))
+             (fmtlen (number-to-string (length fmt-body))))
+        (setq fmt (concat before "%" padchar fmtlen "d" after))
+        (setq start (string-to-number start-text))))
+     (t (error "Invalid number format %s" fmt)))
     (setq step (or step 1))
     (save-excursion
       (delete-rectangle min max)
       ;; computing list of insertings
       (while (< l lines)
-        (setq rect-lst (cons (format fmt num) rect-lst))
-        (setq num (+ step num)
+        (setq rect-lst (cons (format fmt start) rect-lst))
+        (setq start (+ step start)
               l (1+ l)))
-      (when (>= end start)
+      (when (>= end begin)
         (setq rect-lst (nreverse rect-lst)))
       (goto-char min)
       (insert-rectangle rect-lst))))
@@ -252,6 +254,26 @@ Only effect to region if region is activated.
   "Downcase rectangle"
   (interactive "*r")
   (rectplus-do-translate start end 'downcase))
+
+(defun rectplus--just-a-format-p (fmt)
+  (and
+   (condition-case nil (format fmt 1) (error nil))
+   ;; heuristic check ;-)
+   (catch 'done
+     (let ((i 0))
+       (while (< i 3)
+         (let* ((r (random))
+                (fmttext (format fmt r))
+                (dectext (number-to-string r))
+                (hextext (format "%x" r))
+                (octtext (format "%o" r))
+                (case-fold-search t))
+           (unless (or (string-match dectext fmttext)
+                       (string-match hextext fmttext)
+                       (string-match octtext fmttext))
+             (throw 'done nil))
+           (setq i (1+ i))))
+       t))))
 
 (defun rectplus--count-lines (start end)
   (let ((lines 0))
