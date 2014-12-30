@@ -3,7 +3,7 @@ rect+.el
 
 rect+.el provides extensions to rect.el
 
-** Install
+## Install:
 
 Put this file into load-path'ed directory, and byte compile it if
 desired. And put the following expression into your ~/.emacs.
@@ -18,7 +18,7 @@ desired. And put the following expression into your ~/.emacs.
     (define-key ctl-x-r-map "\M-l" 'rectplus-downcase-rectangle)
     (define-key ctl-x-r-map "\M-u" 'rectplus-upcase-rectangle)
 
-------------- Emacs 22 or earlier -------------
+```********** Emacs 22 or earlier **********```
     (require 'rect+)
     (global-set-key "\C-xrC" 'rectplus-copy-rectangle)
     (global-set-key "\C-xrN" 'rectplus-insert-number-rectangle)

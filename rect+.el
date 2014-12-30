@@ -4,7 +4,8 @@
 ;; Keywords: extensions, data, tools
 ;; URL: https://github.com/mhayashi1120/Emacs-rectplus/raw/master/rect+.el
 ;; Emacs: GNU Emacs 22 or later
-;; Version: 1.0.7
+;; Version: 1.0.8
+;; Package-Requires: ()
 
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License as
@@ -25,7 +26,7 @@
 
 ;; rect+.el provides extensions to rect.el
 
-;;; Install:
+;; ## Install:
 
 ;; Put this file into load-path'ed directory, and byte compile it if
 ;; desired. And put the following expression into your ~/.emacs.
@@ -40,7 +41,7 @@
 ;;     (define-key ctl-x-r-map "\M-l" 'rectplus-downcase-rectangle)
 ;;     (define-key ctl-x-r-map "\M-u" 'rectplus-upcase-rectangle)
 
-;; ********** Emacs 22 or earlier **********
+;; ```********** Emacs 22 or earlier **********```
 ;;     (require 'rect+)
 ;;     (global-set-key "\C-xrC" 'rectplus-copy-rectangle)
 ;;     (global-set-key "\C-xrN" 'rectplus-insert-number-rectangle)
@@ -90,7 +91,7 @@ After executing this command, you can type \\[yank-rectangle]."
       (let ((max 0)
 	    str len list)
 	(while (not (eobp))
-	  (setq str (buffer-substring (line-beginning-position) (line-end-position)))
+	  (setq str (buffer-substring (point-at-bol) (point-at-eol)))
 	  (when succeeding
 	    (setq str (concat str succeeding)))
 	  (setq len (string-width str))
@@ -117,10 +118,12 @@ After executing this command, you can type \\[yank-rectangle]."
   (save-excursion
     (mapc
      (lambda (x)
-       (goto-char (line-end-position))
+       (goto-char (point-at-eol))
        (insert preceeding)
        (insert x)
-       (forward-line 1))
+       (forward-line 1)
+       (when (eolp)
+         (newline)))
      killed-rectangle)))
 
 ;;;###autoload
