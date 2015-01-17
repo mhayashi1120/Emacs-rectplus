@@ -4,7 +4,7 @@
 ;; Keywords: extensions, data, tools
 ;; URL: https://github.com/mhayashi1120/Emacs-rectplus/raw/master/rect+.el
 ;; Emacs: GNU Emacs 22 or later
-;; Version: 1.0.8
+;; Version: 1.0.9
 ;; Package-Requires: ()
 
 ;; This program is free software; you can redistribute it and/or
@@ -122,7 +122,8 @@ After executing this command, you can type \\[yank-rectangle]."
        (insert preceeding)
        (insert x)
        (forward-line 1)
-       (when (eolp)
+       (when (and (eolp)
+                  (not (bolp)))
          (newline)))
      killed-rectangle)))
 
