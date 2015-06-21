@@ -19,6 +19,7 @@ desired. And put the following expression into your ~/.emacs.
     (define-key ctl-x-r-map "\M-u" 'rectplus-upcase-rectangle)
 
 ```********** Emacs 22 or earlier **********```
+
     (require 'rect+)
     (global-set-key "\C-xrC" 'rectplus-copy-rectangle)
     (global-set-key "\C-xrN" 'rectplus-insert-number-rectangle)

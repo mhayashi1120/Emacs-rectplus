@@ -2,9 +2,9 @@
 
 ;; Author: Masahiro Hayashi <mhayashi1120@gmail.com>
 ;; Keywords: extensions, data, tools
-;; URL: https://github.com/mhayashi1120/Emacs-rectplus/raw/master/rect+.el
+;; URL: https://github.com/mhayashi1120/Emacs-rectplus
 ;; Emacs: GNU Emacs 22 or later
-;; Version: 1.0.9
+;; Version: 1.0.10
 ;; Package-Requires: ()
 
 ;; This program is free software; you can redistribute it and/or
@@ -42,6 +42,7 @@
 ;;     (define-key ctl-x-r-map "\M-u" 'rectplus-upcase-rectangle)
 
 ;; ```********** Emacs 22 or earlier **********```
+;;
 ;;     (require 'rect+)
 ;;     (global-set-key "\C-xrC" 'rectplus-copy-rectangle)
 ;;     (global-set-key "\C-xrN" 'rectplus-insert-number-rectangle)
@@ -198,7 +199,7 @@ STEP is incremental count. Default is 1.
       (setq fmt number-fmt)
       ;; default is start from 1
       (setq start (or start-from 1)))
-     ((string-match "\\([0 ]\\)*\\([1-9][0-9]*\\)" number-fmt)
+     ((string-match "\\([0 ]\\)*\\([0-9]+\\)" number-fmt)
       (let* ((before (substring number-fmt 0 (match-beginning 0)))
              (after (substring number-fmt (match-end 0)))
              (start-text (match-string 2 number-fmt))
