@@ -4,7 +4,7 @@
 ;; Keywords: extensions, data, tools
 ;; URL: https://github.com/mhayashi1120/Emacs-rectplus
 ;; Emacs: GNU Emacs 22 or later
-;; Version: 1.0.10
+;; Version: 1.1.1
 ;; Package-Requires: ()
 
 ;; This program is free software; you can redistribute it and/or
@@ -40,6 +40,9 @@
 ;;     (define-key ctl-x-r-map "K" 'rectplus-rectangle-to-kill-ring)
 ;;     (define-key ctl-x-r-map "\M-l" 'rectplus-downcase-rectangle)
 ;;     (define-key ctl-x-r-map "\M-u" 'rectplus-upcase-rectangle)
+;;     (define-key ctl-x-r-map "E" 'rectplus-copy-to-eol)
+;;     (define-key ctl-x-r-map "\M-E" 'rectplus-kill-to-eol)
+;;     (define-key ctl-x-r-map "Y" 'rectplus-insert-with-separator)
 
 ;; ```********** Emacs 22 or earlier **********```
 ;;
@@ -52,12 +55,143 @@
 ;;     (global-set-key "\C-xrK" 'rectplus-rectangle-to-kill-ring)
 ;;     (global-set-key "\C-xr\M-l" 'rectplus-downcase-rectangle)
 ;;     (global-set-key "\C-xr\M-u" 'rectplus-upcase-rectangle)
+;;     (global-set-key "\C-xrE" 'rectplus-copy-to-eol)
+;;     (global-set-key "\C-xr\M-E" 'rectplus-kill-to-eol)
+;;     (global-set-key "\C-xrY" 'rectplus-insert-with-separator)
 
 ;;; Code:
 
 (require 'rect)
 
 (defvar current-prefix-arg)
+
+;;;
+;;; Internal function
+;;;
+
+(defun rectplus--just-a-format-p (fmt)
+  (and
+   (condition-case nil (format fmt 1) (error nil))
+   ;; heuristic check ;-)
+   (catch 'done
+     (let ((i 0))
+       (while (< i 3)
+         (let* ((r (random))
+                (fmttext (format fmt r))
+                (dectext (number-to-string r))
+                (hextext (format "%x" r))
+                (octtext (format "%o" r))
+                (case-fold-search t))
+           (unless (or (string-match dectext fmttext)
+                       (string-match hextext fmttext)
+                       (string-match octtext fmttext))
+             (throw 'done nil))
+           (setq i (1+ i))))
+       t))))
+
+(defun rectplus--count-lines (start end)
+  (let ((lines 0))
+    (save-excursion
+      (goto-char start)
+      (while (and (<= (point) end)
+                  (not (eobp)))
+        (forward-line 1)
+        (setq lines (1+ lines))))
+    lines))
+
+(defun rectplus-do-translate (start end translator)
+  "TRANSLATOR is function accept one string argument and return string."
+  (apply-on-rectangle
+   (lambda (s e)
+     (let* ((start (progn (move-to-column s) (point)))
+	    (end (progn (move-to-column e) (point)))
+	    (current (buffer-substring start end))
+	    (new (funcall translator current)))
+       (unless (string= current new)
+	 (delete-region start end)
+	 (insert new))))
+   start end))
+
+;;;
+;;; UI
+;;;
+
+;;
+;; Read minibuffer
+;;
+
+(defun rectplus-read-from-minibuffer (prompt must-match-regexp &optional default)
+  "Check input string by MUST-MACH-REGEXP.
+See `read-from-minibuffer'."
+  (let (str)
+    (while (null str)
+      (setq str (read-from-minibuffer prompt default))
+      (unless (string-match must-match-regexp str)
+	(message "Invalid string!")
+	(sit-for 0.5)
+	(setq str nil)))
+    str))
+
+(defun rectplus-read-number (prompt default)
+  (string-to-number (rectplus-read-from-minibuffer
+		     prompt "\\`[-+]?[0-9]+\\'"
+		     (number-to-string default))))
+
+(defun rectplus-non-rectangle-to-rectangle (strings)
+  (let ((max 0))
+    (dolist (s strings)
+      (let ((wid (string-width s)))
+        (when (> wid max)
+          (setq max wid))))
+    (let ((fmt (concat "%-" (number-to-string max) "s")))
+      (mapcar
+       (lambda (s)
+         (format fmt s))
+       strings))))
+
+(defun rectplus-read-regexp (prompt)
+  (if (fboundp 'read-regexp)
+      (read-regexp prompt)
+    (read-from-minibuffer (concat prompt ": "))))
+
+;;
+;; message
+;;
+
+(defun rectplus-msg--after-kill ()
+  (message "%s"
+           (substitute-command-keys
+	    (concat "Killed text converted to rectangle. "
+		    "You can type \\[yank-rectangle] now."))))
+
+;;
+;; Internal function
+;;
+
+(defun rectplus--*-to-eol-region (start end &optional delete)
+  (save-excursion
+    ;; save end as marker
+    (goto-char end)
+    (setq end (point-marker))
+    (goto-char start)
+    (let ((start-col (current-column))
+          (list '()))
+      (while (and (<= (point) end)
+                  (not (eobp)))
+        (let ((s (buffer-substring (point) (point-at-eol))))
+          (when delete
+            (delete-region (point) (point-at-eol)))
+          (setq list (cons s list)))
+        (forward-line 1)
+        (move-to-column start-col))
+      (setq list (nreverse list))
+      (setq killed-rectangle
+            (rectplus-non-rectangle-to-rectangle list))))
+  (rectplus-msg--after-kill))
+
+;;;
+;;; Interactive Command
+;;;
 
 ;;;###autoload
 (defun rectplus-rectangle-to-kill-ring ()
@@ -70,7 +204,8 @@ After executing this command, you can type \\[yank]."
     (let (message-log-max)
       (message ""))
     (kill-new (buffer-string)))
-  (message (substitute-command-keys
+  (message "%s"
+           (substitute-command-keys
 	    (concat "Killed rectangle converted to normal text. "
 		    "You can type \\[yank] now."))))
 
@@ -89,22 +224,17 @@ After executing this command, you can type \\[yank-rectangle]."
       (setq tab-width tab)
       (insert (current-kill 0))
       (goto-char (point-min))
-      (let ((max 0)
-	    str len list)
+      (let (str list)
 	(while (not (eobp))
 	  (setq str (buffer-substring (point-at-bol) (point-at-eol)))
 	  (when succeeding
 	    (setq str (concat str succeeding)))
-	  (setq len (string-width str))
-	  (when (> len max)
-	    (setq max len))
 	  (setq list (cons str list))
 	  (forward-line 1))
+        (setq list (nreverse list))
 	(setq killed-rectangle
-	      (rectplus-non-rectangle-to-rectangle (nreverse list) max)))))
-  (message (substitute-command-keys
-	    (concat "Killed text converted to rectangle. "
-		    "You can type \\[yank-rectangle] now."))))
+	      (rectplus-non-rectangle-to-rectangle list)))))
+  (rectplus-msg--after-kill))
 
 ;;;###autoload
 (defun rectplus-append-rectangle-to-eol (&optional preceeding)
@@ -123,7 +253,8 @@ After executing this command, you can type \\[yank-rectangle]."
        (insert preceeding)
        (insert x)
        (forward-line 1)
-       (when (and (eolp)
+       ;; reach to eob and no last newline
+       (when (and (eobp)
                   (not (bolp)))
          (newline)))
      killed-rectangle)))
@@ -133,7 +264,8 @@ After executing this command, you can type \\[yank-rectangle]."
   "Copy rectangle area."
   (interactive "r")
   (deactivate-mark)
-  (setq killed-rectangle (extract-rectangle start end)))
+  (setq killed-rectangle (extract-rectangle start end))
+  (rectplus-msg--after-kill))
 
 ;;;###autoload
 (defun rectplus-insert-number-rectangle (begin end number-fmt &optional step start-from)
@@ -223,6 +355,33 @@ STEP is incremental count. Default is 1.
       (insert-rectangle rect-lst))))
 
 ;;;###autoload
+(defun rectplus-insert-with-separator (separator &optional trim)
+  "Insert each line as an item. TODO Not rectangle insert.. need more and more consideration
+ TODO Not Like `insert-rectangle' but can choice SEPARATOR. to current cursor..
+TODO and consider key bindings
+"
+  (interactive
+   (progn
+     (barf-if-buffer-read-only)
+     (list (read-from-minibuffer "Separator: ")
+           (and current-prefix-arg t))))
+  (let ((list killed-rectangle))
+    (while list
+      (let ((str (car list)))
+        (cond
+         ((not trim))
+         ((and (eq trim t) (string-match "\\`[\s\t\n]*\\(.*?\\)[\s\t\n]*\\'" str))
+          (setq str (match-string 1 str)))
+         ((and (stringp trim)
+               (string-match trim str))
+          (setq str (match-string 1 str))))
+        ;; if not a first item
+        (unless (eq list killed-rectangle)
+          (insert separator))
+        (insert str))
+      (setq list (cdr list)))))
+
+;;;###autoload
 (defun rectplus-create-rectangle-by-regexp (start end regexp)
   "Capture string matching to REGEXP.
 Only effect to region if region is activated.
@@ -232,21 +391,19 @@ Only effect to region if region is activated.
 	  (end (if mark-active (region-end) (point-max)))
 	  (regexp (rectplus-read-regexp "Regexp")))
      (list beg end regexp)))
-  (let ((max 0)
-	str len list)
+  (let (str list)
     (save-excursion
       (save-restriction
 	(narrow-to-region start end)
 	(goto-char (point-min))
 	(while (re-search-forward regexp nil t)
 	  (setq str (match-string 0))
-	  (setq len (string-width str))
-	  (setq list (cons str list))
-	  (when (> len max)
-	    (setq max len)))))
+	  (setq list (cons str list)))))
+    (setq list (nreverse list))
     ;; fill by space
     (setq killed-rectangle
-	  (rectplus-non-rectangle-to-rectangle (nreverse list) max))))
+	  (rectplus-non-rectangle-to-rectangle list))
+    (rectplus-msg--after-kill)))
 
 ;;;###autoload
 (defun rectplus-upcase-rectangle (start end)
@@ -260,77 +417,21 @@ Only effect to region if region is activated.
   (interactive "*r")
   (rectplus-do-translate start end 'downcase))
 
-(defun rectplus--just-a-format-p (fmt)
-  (and
-   (condition-case nil (format fmt 1) (error nil))
-   ;; heuristic check ;-)
-   (catch 'done
-     (let ((i 0))
-       (while (< i 3)
-         (let* ((r (random))
-                (fmttext (format fmt r))
-                (dectext (number-to-string r))
-                (hextext (format "%x" r))
-                (octtext (format "%o" r))
-                (case-fold-search t))
-           (unless (or (string-match dectext fmttext)
-                       (string-match hextext fmttext)
-                       (string-match octtext fmttext))
-             (throw 'done nil))
-           (setq i (1+ i))))
-       t))))
+;;;###autoload
+(defun rectplus-kill-to-eol (start end)
+  "Kill rectangle START column to end of line in rectangle.
+END is indicated as last line of rectangle.
+This function is useful if last column trailing space was truncated."
+  (interactive "r")
+  (rectplus--*-to-eol-region start end t))
 
-(defun rectplus--count-lines (start end)
-  (let ((lines 0))
-    (save-excursion
-      (goto-char start)
-      (while (and (<= (point) end)
-                  (not (eobp)))
-        (forward-line 1)
-        (setq lines (1+ lines))))
-    lines))
-
-(defun rectplus-do-translate (start end translator)
-  "TRANSLATOR is function accept one string argument and return string."
-  (apply-on-rectangle
-   (lambda (s e)
-     (let* ((start (progn (move-to-column s) (point)))
-	    (end (progn (move-to-column e) (point)))
-	    (current (buffer-substring start end))
-	    (new (funcall translator current)))
-       (unless (string= current new)
-	 (delete-region start end)
-	 (insert new))))
-   start end))
-
-(defun rectplus-read-from-minibuffer (prompt must-match-regexp &optional default)
-  "Check input string by MUST-MACH-REGEXP.
-See `read-from-minibuffer'."
-  (let (str)
-    (while (null str)
-      (setq str (read-from-minibuffer prompt default))
-      (unless (string-match must-match-regexp str)
-	(message "Invalid string!")
-	(sit-for 0.5)
-	(setq str nil)))
-    str))
-
-(defun rectplus-read-number (prompt default)
-  (string-to-number (rectplus-read-from-minibuffer
-		     prompt "\\`[-+]?[0-9]+\\'"
-		     (number-to-string default))))
-
-(defun rectplus-non-rectangle-to-rectangle (strings &optional max)
-  (let ((fmt (concat "%-" (number-to-string max) "s")))
-    (mapcar
-     (lambda (s)
-       (format fmt s))
-     strings)))
-
-(defun rectplus-read-regexp (prompt)
-  (if (fboundp 'read-regexp)
-      (read-regexp prompt)
-    (read-from-minibuffer (concat prompt ": "))))
+;;;###autoload
+(defun rectplus-copy-to-eol (start end)
+  "Copy rectangle START column to end of line in rectangle.
+END is indicated as last line of rectangle.
+This function is useful if last column trailing space was truncated."
+  (interactive "r")
+  (rectplus--*-to-eol-region start end))
 
 ;; for ELPA
 ;;;###autoload(define-key ctl-x-r-map "C" 'rectplus-copy-rectangle)
@@ -341,6 +442,9 @@ See `read-from-minibuffer'."
 ;;;###autoload(define-key ctl-x-r-map "K" 'rectplus-rectangle-to-kill-ring)
 ;;;###autoload(define-key ctl-x-r-map "\M-l" 'rectplus-downcase-rectangle)
 ;;;###autoload(define-key ctl-x-r-map "\M-u" 'rectplus-upcase-rectangle)
+;;;###autoload(define-key ctl-x-r-map "E" 'rectplus-copy-to-eol)
+;;;###autoload(define-key ctl-x-r-map "\M-E" 'rectplus-kill-to-eol)
+;;;###autoload(define-key ctl-x-r-map "Y" 'rectplus-insert-with-separator)
 
 (provide 'rect+)
 
