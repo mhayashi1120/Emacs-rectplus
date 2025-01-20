@@ -42,7 +42,6 @@
 ;;     (define-key ctl-x-r-map "\M-u" 'rectplus-upcase-rectangle)
 ;;     (define-key ctl-x-r-map "E" 'rectplus-copy-to-eol)
 ;;     (define-key ctl-x-r-map "\M-E" 'rectplus-kill-to-eol)
-;;     (define-key ctl-x-r-map "Y" 'rectplus-insert-with-separator)
 
 ;; ```********** Emacs 22 or earlier **********```
 ;;
@@ -57,7 +56,6 @@
 ;;     (global-set-key "\C-xr\M-u" 'rectplus-upcase-rectangle)
 ;;     (global-set-key "\C-xrE" 'rectplus-copy-to-eol)
 ;;     (global-set-key "\C-xr\M-E" 'rectplus-kill-to-eol)
-;;     (global-set-key "\C-xrY" 'rectplus-insert-with-separator)
 
 ;;; Code:
 
@@ -355,33 +353,6 @@ STEP is incremental count. Default is 1.
       (insert-rectangle rect-lst))))
 
 ;;;###autoload
-(defun rectplus-insert-with-separator (separator &optional trim)
-  "Insert each line as an item. TODO Not rectangle insert.. need more and more consideration
- TODO Not Like `insert-rectangle' but can choice SEPARATOR. to current cursor..
-TODO and consider key bindings
-"
-  (interactive
-   (progn
-     (barf-if-buffer-read-only)
-     (list (read-from-minibuffer "Separator: ")
-           (and current-prefix-arg t))))
-  (let ((list killed-rectangle))
-    (while list
-      (let ((str (car list)))
-        (cond
-         ((not trim))
-         ((and (eq trim t) (string-match "\\`[\s\t\n]*\\(.*?\\)[\s\t\n]*\\'" str))
-          (setq str (match-string 1 str)))
-         ((and (stringp trim)
-               (string-match trim str))
-          (setq str (match-string 1 str))))
-        ;; if not a first item
-        (unless (eq list killed-rectangle)
-          (insert separator))
-        (insert str))
-      (setq list (cdr list)))))
-
-;;;###autoload
 (defun rectplus-create-rectangle-by-regexp (start end regexp)
   "Capture string matching to REGEXP.
 Only effect to region if region is activated.
@@ -444,7 +415,6 @@ This function is useful if last column trailing space was truncated."
 ;;;###autoload(define-key ctl-x-r-map "\M-u" 'rectplus-upcase-rectangle)
 ;;;###autoload(define-key ctl-x-r-map "E" 'rectplus-copy-to-eol)
 ;;;###autoload(define-key ctl-x-r-map "\M-E" 'rectplus-kill-to-eol)
-;;;###autoload(define-key ctl-x-r-map "Y" 'rectplus-insert-with-separator)
 
 (provide 'rect+)
 
