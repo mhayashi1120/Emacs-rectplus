@@ -176,9 +176,9 @@ See `read-from-minibuffer'."
           (list '()))
       (while (and (<= (point) end)
                   (not (eobp)))
-        (let ((s (buffer-substring (point) (point-at-eol))))
+        (let ((s (buffer-substring (point) (line-end-position))))
           (when delete
-            (delete-region (point) (point-at-eol)))
+            (delete-region (point) (line-end-position)))
           (setq list (cons s list)))
         (forward-line 1)
         (move-to-column start-col))
@@ -224,7 +224,7 @@ After executing this command, you can type \\[yank-rectangle]."
       (goto-char (point-min))
       (let (str list)
 	(while (not (eobp))
-	  (setq str (buffer-substring (point-at-bol) (point-at-eol)))
+	  (setq str (buffer-substring (line-beginning-position) (line-end-position)))
 	  (when succeeding
 	    (setq str (concat str succeeding)))
 	  (setq list (cons str list))
@@ -247,7 +247,7 @@ After executing this command, you can type \\[yank-rectangle]."
   (save-excursion
     (mapc
      (lambda (x)
-       (goto-char (point-at-eol))
+       (goto-char (line-end-position))
        (insert preceeding)
        (insert x)
        (forward-line 1)
